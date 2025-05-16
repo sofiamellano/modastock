@@ -1,20 +1,20 @@
 "use client"
 
-import { database, getGarmentById, formatDate } from "@/src/lib/data"
+import { baseDeDatos, obtenerPrendaPorId, formatearFecha } from "@/src/lib/data"
 
-interface SaleDetailModalProps {
-  saleId: number
-  onClose: () => void
+interface ModalDetalleVentaProps {
+  idVenta: number
+  alCerrar: () => void
 }
 
-export default function SaleDetailModal({ saleId, onClose }: SaleDetailModalProps) {
-  const sale = database.sales.find((s) => s.id === saleId)
+export default function ModalDetalleVenta({ idVenta, alCerrar }: ModalDetalleVentaProps) {
+  const venta = baseDeDatos.ventas.find((v) => v.id === idVenta)
 
-  if (!sale) {
+  if (!venta) {
     return null
   }
 
-  const handlePrint = () => {
+  const manejarImpresion = () => {
     window.print()
   }
 
@@ -22,19 +22,19 @@ export default function SaleDetailModal({ saleId, onClose }: SaleDetailModalProp
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-2xl max-h-screen overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold text-gray-800">Detalles de Venta</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+          <h3 className="text-xl font-bold text-gray-800">Detalles de la Venta</h3>
+          <button onClick={alCerrar} className="text-gray-500 hover:text-gray-700">
             <i className="fas fa-times"></i>
           </button>
         </div>
         <div>
           <div className="mb-4">
-            <h4 className="text-lg font-semibold mb-2">Detalles de Venta #{sale.id}</h4>
+            <h4 className="text-lg font-semibold mb-2">Venta #{venta.id}</h4>
             <p>
-              <strong>Fecha:</strong> {formatDate(sale.date)}
+              <strong>Fecha:</strong> {formatearFecha(venta.fecha)}
             </p>
             <p>
-              <strong>Total:</strong> ${sale.total.toFixed(2)}
+              <strong>Total:</strong> ${venta.total.toFixed(2)}
             </p>
           </div>
           <div className="mb-4">
@@ -60,15 +60,17 @@ export default function SaleDetailModal({ saleId, onClose }: SaleDetailModalProp
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {sale.items.map((item, index) => {
-                  const garment = getGarmentById(item.garmentId)
+                {venta.items.map((item, index) => {
+                  const prenda = obtenerPrendaPorId(item.prendaId)
                   return (
                     <tr key={index}>
-                      <td className="px-6 py-4 whitespace-nowrap">{garment?.type}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{garment?.size || "N/A"}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{item.quantity}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">${item.price.toFixed(2)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">${(item.quantity * item.price).toFixed(2)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{prenda?.tipo}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{prenda?.talle || "N/A"}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{item.cantidad}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">${item.precio.toFixed(2)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        ${(item.cantidad * item.precio).toFixed(2)}
+                      </td>
                     </tr>
                   )
                 })}
@@ -77,13 +79,13 @@ export default function SaleDetailModal({ saleId, onClose }: SaleDetailModalProp
           </div>
           <div className="flex justify-end">
             <button
-              onClick={handlePrint}
+              onClick={manejarImpresion}
               className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 mr-2"
             >
               <i className="fas fa-print mr-2"></i>Imprimir
             </button>
             <button
-              onClick={onClose}
+              onClick={alCerrar}
               className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
             >
               Cerrar

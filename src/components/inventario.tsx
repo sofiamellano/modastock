@@ -1,35 +1,36 @@
 "use client"
 
 import { useState } from "react"
-import { database, getSupplierById, deleteGarment } from "@/src/lib/data"
+import { baseDeDatos, obtenerProveedorPorId, eliminarPrenda } from "@/src/lib/data"
 
 interface InventarioProps {
-  onEditGarment: (garmentId: number) => void
+  onEditPrenda: (prendaId: number) => void
   onDataUpdate: () => void
 }
 
-export default function Inventario({ onEditGarment, onDataUpdate }: InventarioProps) {
-  const [filterType, setFilterType] = useState("")
-  const [searchText, setSearchText] = useState("")
+export default function Inventario({ onEditPrenda, onDataUpdate }: InventarioProps) {
+  const [filtroTipo, setFiltroTipo] = useState("")
+  const [textoBusqueda, setTextoBusqueda] = useState("")
 
-  const handleDeleteGarment = (garmentId: number) => {
+  const handleEliminarPrenda = (prendaId: number) => {
     if (window.confirm("¿Está seguro que desea eliminar esta prenda?")) {
-      const success = deleteGarment(garmentId)
+      const success = eliminarPrenda(prendaId)
       if (success) {
-        alert("Prenda eliminada exitosamente!")
+        alert("¡Prenda eliminada exitosamente!")
         onDataUpdate()
       }
     }
   }
 
-  const filteredGarments = database.garments.filter((garment) => {
-    if (filterType && garment.type !== filterType) return false
+  const prendasFiltradas = baseDeDatos.prendas.filter((prenda) => {
+    if (filtroTipo && prenda.tipo !== filtroTipo) return false
     if (
-      searchText &&
-      !garment.type.toLowerCase().includes(searchText.toLowerCase()) &&
-      !(garment.size && garment.size.toLowerCase().includes(searchText.toLowerCase()))
-    )
+      textoBusqueda &&
+      !prenda.tipo.toLowerCase().includes(textoBusqueda.toLowerCase()) &&
+      !(prenda.talle && prenda.talle.toLowerCase().includes(textoBusqueda.toLowerCase()))
+    ) {
       return false
+    }
     return true
   })
 
@@ -43,8 +44,8 @@ export default function Inventario({ onEditGarment, onDataUpdate }: InventarioPr
         <div className="relative w-64">
           <input
             type="text"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            value={textoBusqueda}
+            onChange={(e) => setTextoBusqueda(e.target.value)}
             placeholder="Buscar prendas..."
             className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
@@ -52,8 +53,8 @@ export default function Inventario({ onEditGarment, onDataUpdate }: InventarioPr
         </div>
         <div>
           <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
+            value={filtroTipo}
+            onChange={(e) => setFiltroTipo(e.target.value)}
             className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             <option value="">Todas las prendas</option>
@@ -73,74 +74,40 @@ export default function Inventario({ onEditGarment, onDataUpdate }: InventarioPr
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Tipo
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Talle
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Stock
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Precio Compra
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Precio Venta
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Mayorista
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Acciones
-              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Talle</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Compra</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Venta</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredGarments.map((garment) => {
-              const supplier = getSupplierById(garment.supplierId)
+            {prendasFiltradas.map((prenda) => {
+              const proveedor = obtenerProveedorPorId(prenda.proveedorId)
 
               return (
-                <tr key={garment.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">{garment.type}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{garment.size || "N/A"}</td>
-                  <td
-                    className={`px-6 py-4 whitespace-nowrap ${garment.stock < 5 ? "text-red-600 font-semibold" : ""}`}
-                  >
-                    {garment.stock}
+                <tr key={prenda.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">{prenda.tipo}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{prenda.talle || "N/A"}</td>
+                  <td className={`px-6 py-4 whitespace-nowrap ${prenda.stock < 5 ? "text-red-600 font-semibold" : ""}`}>
+                    {prenda.stock}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">${garment.purchasePrice.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">${garment.salePrice.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{supplier?.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">${prenda.precioCompra.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">${prenda.precioVenta.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{proveedor?.nombre || "N/A"}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button
-                      onClick={() => onEditGarment(garment.id)}
+                      onClick={() => onEditPrenda(prenda.id)}
                       className="text-indigo-600 hover:text-indigo-900 mr-3"
                     >
                       <i className="fas fa-edit"></i>
                     </button>
-                    <button onClick={() => handleDeleteGarment(garment.id)} className="text-red-600 hover:text-red-900">
+                    <button
+                      onClick={() => handleEliminarPrenda(prenda.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
                       <i className="fas fa-trash"></i>
                     </button>
                   </td>

@@ -2,16 +2,22 @@
 
 import { useEffect, useRef } from "react"
 import { Chart, registerables } from "chart.js"
-import { getLowStockItems, getGarmentsByType, getSalesByDay, getSupplierById, formatDate } from "@/src/lib/data"
+import {
+  obtenerPrendasConPocoStock,
+  obtenerPrendasPorTipo,
+  obtenerVentasPorDia,
+  obtenerProveedorPorId,
+  formatearFecha
+} from "@/src/lib/data"
 
 Chart.register(...registerables)
 
 interface DashboardProps {
   stats: {
-    totalStock: number
-    salesToday: number
-    totalSuppliers: number
-    incomeToday: number
+    prendasTotales: number
+    ventasHoy: number
+    mayoristasTotales: number
+    ingresosHoy: number
   }
 }
 
@@ -22,35 +28,28 @@ export default function Dashboard({ stats }: DashboardProps) {
   const salesChartInstance = useRef<Chart | null>(null)
 
   useEffect(() => {
-    initCharts()
+    inicializarGraficos()
     return () => {
-      if (stockChartInstance.current) {
-        stockChartInstance.current.destroy()
-      }
-      if (salesChartInstance.current) {
-        salesChartInstance.current.destroy()
-      }
+      stockChartInstance.current?.destroy()
+      salesChartInstance.current?.destroy()
     }
   }, [])
 
-  const initCharts = () => {
+  const inicializarGraficos = () => {
     if (stockChartRef.current && salesChartRef.current) {
-      // Stock by type chart
       const stockCtx = stockChartRef.current.getContext("2d")
       if (stockCtx) {
-        if (stockChartInstance.current) {
-          stockChartInstance.current.destroy()
-        }
+        stockChartInstance.current?.destroy()
 
-        const garmentsByType = getGarmentsByType()
+        const prendasPorTipo = obtenerPrendasPorTipo()
         stockChartInstance.current = new Chart(stockCtx, {
           type: "bar",
           data: {
-            labels: Object.keys(garmentsByType),
+            labels: Object.keys(prendasPorTipo),
             datasets: [
               {
                 label: "Prendas en Stock",
-                data: Object.values(garmentsByType),
+                data: Object.values(prendasPorTipo),
                 backgroundColor: "rgba(79, 70, 229, 0.7)",
                 borderColor: "rgba(79, 70, 229, 1)",
                 borderWidth: 1,
@@ -69,22 +68,19 @@ export default function Dashboard({ stats }: DashboardProps) {
         })
       }
 
-      // Sales by day chart
       const salesCtx = salesChartRef.current.getContext("2d")
       if (salesCtx) {
-        if (salesChartInstance.current) {
-          salesChartInstance.current.destroy()
-        }
+        salesChartInstance.current?.destroy()
 
-        const salesByDay = getSalesByDay()
+        const ventasPorDia = obtenerVentasPorDia()
         salesChartInstance.current = new Chart(salesCtx, {
           type: "line",
           data: {
-            labels: Object.keys(salesByDay).map((date) => formatDate(date, true)),
+            labels: Object.keys(ventasPorDia).map((fecha) => formatearFecha(fecha, true)),
             datasets: [
               {
                 label: "Ventas por Día ($)",
-                data: Object.values(salesByDay),
+                data: Object.values(ventasPorDia),
                 backgroundColor: "rgba(16, 185, 129, 0.2)",
                 borderColor: "rgba(16, 185, 129, 1)",
                 borderWidth: 2,
@@ -107,51 +103,24 @@ export default function Dashboard({ stats }: DashboardProps) {
     }
   }
 
-  const lowStockItems = getLowStockItems()
+  const prendasBajoStock = obtenerPrendasConPocoStock()
 
   return (
     <>
-      {/* Stats Cards */}
+      {/* Tarjetas de estadísticas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="highlight-card bg-white rounded-xl shadow p-6 flex items-center transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg">
-          <div className="p-3 rounded-full bg-indigo-100 text-indigo-600 mr-4">
-            <i className="fas fa-tshirt text-xl"></i>
-          </div>
-          <div>
-            <p className="text-gray-500 text-sm">Prendas en Stock</p>
-            <p className="text-2xl font-bold">{stats.totalStock}</p>
-          </div>
-        </div>
-        <div className="highlight-card bg-white rounded-xl shadow p-6 flex items-center transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg">
-          <div className="p-3 rounded-full bg-green-100 text-green-600 mr-4">
-            <i className="fas fa-cash-register text-xl"></i>
-          </div>
-          <div>
-            <p className="text-gray-500 text-sm">Ventas Hoy</p>
-            <p className="text-2xl font-bold">{stats.salesToday}</p>
-          </div>
-        </div>
-        <div className="highlight-card bg-white rounded-xl shadow p-6 flex items-center transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg">
-          <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
-            <i className="fas fa-truck text-xl"></i>
-          </div>
-          <div>
-            <p className="text-gray-500 text-sm">Mayoristas</p>
-            <p className="text-2xl font-bold">{stats.totalSuppliers}</p>
-          </div>
-        </div>
-        <div className="highlight-card bg-white rounded-xl shadow p-6 flex items-center transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg">
-          <div className="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
-            <i className="fas fa-dollar-sign text-xl"></i>
-          </div>
-          <div>
-            <p className="text-gray-500 text-sm">Ingresos Hoy</p>
-            <p className="text-2xl font-bold">${stats.incomeToday.toFixed(2)}</p>
-          </div>
-        </div>
+        <CardEstadistica icono="fas fa-tshirt" color="indigo" titulo="Prendas en Stock" valor={stats.prendasTotales} />
+        <CardEstadistica icono="fas fa-cash-register" color="green" titulo="Ventas Hoy" valor={stats.ventasHoy} />
+        <CardEstadistica icono="fas fa-truck" color="blue" titulo="Mayoristas" valor={stats.mayoristasTotales} />
+        <CardEstadistica
+          icono="fas fa-dollar-sign"
+          color="purple"
+          titulo="Ingresos Hoy"
+          valor={`$${stats.ingresosHoy.toFixed(2)}`}
+        />
       </div>
 
-      {/* Dashboard Charts */}
+      {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-white rounded-xl shadow p-6">
           <h2 className="text-xl font-bold text-gray-800 mb-4">Prendas en Stock por Tipo</h2>
@@ -167,62 +136,37 @@ export default function Dashboard({ stats }: DashboardProps) {
         </div>
       </div>
 
-      {/* Low Stock Items */}
+      {/* Prendas con stock bajo */}
       <div className="bg-white rounded-xl shadow p-6">
         <h2 className="text-xl font-bold text-gray-800 mb-4">Prendas con Stock Bajo</h2>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Tipo
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Talle
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Stock Actual
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Precio Venta
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Mayorista
-                </th>
+                <EncabezadoTabla texto="Tipo" />
+                <EncabezadoTabla texto="Talle" />
+                <EncabezadoTabla texto="Stock Actual" />
+                <EncabezadoTabla texto="Precio Venta" />
+                <EncabezadoTabla texto="Mayorista" />
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {lowStockItems.length === 0 ? (
+              {prendasBajoStock.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
                     No hay prendas con stock bajo
                   </td>
                 </tr>
               ) : (
-                lowStockItems.map((garment) => {
-                  const supplier = getSupplierById(garment.supplierId)
+                prendasBajoStock.map((prenda) => {
+                  const mayorista = obtenerProveedorPorId(prenda.proveedorId)
                   return (
-                    <tr key={garment.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">{garment.type}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{garment.size || "N/A"}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-red-600 font-semibold">{garment.stock}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">${garment.salePrice.toFixed(2)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{supplier?.name}</td>
+                    <tr key={prenda.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">{prenda.tipo}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{prenda.talle || "N/A"}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-red-600 font-semibold">{prenda.stock}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">${prenda.precioVenta.toFixed(2)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{mayorista?.nombre}</td>
                     </tr>
                   )
                 })
@@ -232,5 +176,42 @@ export default function Dashboard({ stats }: DashboardProps) {
         </div>
       </div>
     </>
+  )
+}
+
+// Componente reutilizable para tarjetas de estadísticas
+function CardEstadistica({
+  icono,
+  color,
+  titulo,
+  valor,
+}: {
+  icono: string
+  color: string
+  titulo: string
+  valor: string | number
+}) {
+  return (
+    <div className="highlight-card bg-white rounded-xl shadow p-6 flex items-center transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg">
+      <div className={`p-3 rounded-full bg-${color}-100 text-${color}-600 mr-4`}>
+        <i className={`${icono} text-xl`}></i>
+      </div>
+      <div>
+        <p className="text-gray-500 text-sm">{titulo}</p>
+        <p className="text-2xl font-bold">{valor}</p>
+      </div>
+    </div>
+  )
+}
+
+// Componente reutilizable para encabezado de tabla
+function EncabezadoTabla({ texto }: { texto: string }) {
+  return (
+    <th
+      scope="col"
+      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+    >
+      {texto}
+    </th>
   )
 }

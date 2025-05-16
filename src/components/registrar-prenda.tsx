@@ -1,14 +1,14 @@
 "use client"
 
 import { useState, type FormEvent, type ChangeEvent } from "react"
-import { registerNewGarment } from "@/src/lib/data"
+import { registrarNuevaPrenda } from "@/src/lib/data"
 
 interface RegistrarPrendaProps {
   onRegister: () => void
 }
 
 export default function RegistrarPrenda({ onRegister }: RegistrarPrendaProps) {
-  const [formData, setFormData] = useState({
+  const [formulario, setFormulario] = useState({
     tipoPrenda: "",
     cantidad: "",
     precioCompra: "",
@@ -20,46 +20,42 @@ export default function RegistrarPrenda({ onRegister }: RegistrarPrendaProps) {
     telefonoMayorista: "",
   })
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const manejarCambio = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { id, value } = e.target
-    setFormData((prev) => ({ ...prev, [id]: value }))
+    setFormulario((prev) => ({ ...prev, [id]: value }))
 
-    // Calculate total purchase when quantity or price changes
     if (id === "cantidad" || id === "precioCompra") {
-      const cantidad = id === "cantidad" ? Number.parseInt(value) || 0 : Number.parseInt(formData.cantidad) || 0
-      const precioCompra =
-        id === "precioCompra" ? Number.parseFloat(value) || 0 : Number.parseFloat(formData.precioCompra) || 0
+      const cantidad = id === "cantidad" ? Number.parseInt(value) || 0 : Number.parseInt(formulario.cantidad) || 0
+      const precioCompra = id === "precioCompra" ? Number.parseFloat(value) || 0 : Number.parseFloat(formulario.precioCompra) || 0
       const total = cantidad * precioCompra
-      setFormData((prev) => ({ ...prev, totalCompra: total.toFixed(2) }))
+      setFormulario((prev) => ({ ...prev, totalCompra: total.toFixed(2) }))
     }
 
-    // Calculate unit price when total is changed manually
     if (id === "totalCompra") {
       const total = Number.parseFloat(value) || 0
-      const cantidad = Number.parseInt(formData.cantidad) || 0
+      const cantidad = Number.parseInt(formulario.cantidad) || 0
       if (cantidad > 0) {
         const precioUnitario = total / cantidad
-        setFormData((prev) => ({ ...prev, precioCompra: precioUnitario.toFixed(2) }))
+        setFormulario((prev) => ({ ...prev, precioCompra: precioUnitario.toFixed(2) }))
       }
     }
   }
 
-  const handleSubmit = (e: FormEvent) => {
+  const manejarEnvio = (e: FormEvent) => {
     e.preventDefault()
 
-    registerNewGarment(
-      formData.tipoPrenda,
-      Number.parseInt(formData.cantidad),
-      Number.parseFloat(formData.precioCompra),
-      Number.parseFloat(formData.precioVenta),
-      formData.talle,
-      formData.nombreMayorista,
-      formData.direccionMayorista,
-      formData.telefonoMayorista,
+    registrarNuevaPrenda(
+      formulario.tipoPrenda,
+      Number.parseInt(formulario.cantidad),
+      Number.parseFloat(formulario.precioCompra),
+      Number.parseFloat(formulario.precioVenta),
+      formulario.talle,
+      formulario.nombreMayorista,
+      formulario.direccionMayorista,
+      formulario.telefonoMayorista,
     )
 
-    // Reset form
-    setFormData({
+    setFormulario({
       tipoPrenda: "",
       cantidad: "",
       precioCompra: "",
@@ -71,15 +67,12 @@ export default function RegistrarPrenda({ onRegister }: RegistrarPrendaProps) {
       telefonoMayorista: "",
     })
 
-    // Show success message
-    alert("Prenda registrada exitosamente!")
-
-    // Update parent component
+    alert("¡Prenda registrada exitosamente!")
     onRegister()
   }
 
-  const handleCancel = () => {
-    setFormData({
+  const manejarCancelacion = () => {
+    setFormulario({
       tipoPrenda: "",
       cantidad: "",
       precioCompra: "",
@@ -97,7 +90,7 @@ export default function RegistrarPrenda({ onRegister }: RegistrarPrendaProps) {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-gray-800">Registrar Nueva Prenda</h2>
       </div>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={manejarEnvio}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <label htmlFor="tipoPrenda" className="block text-sm font-medium text-gray-700 mb-1">
@@ -105,8 +98,8 @@ export default function RegistrarPrenda({ onRegister }: RegistrarPrendaProps) {
             </label>
             <select
               id="tipoPrenda"
-              value={formData.tipoPrenda}
-              onChange={handleChange}
+              value={formulario.tipoPrenda}
+              onChange={manejarCambio}
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               required
             >
@@ -129,8 +122,8 @@ export default function RegistrarPrenda({ onRegister }: RegistrarPrendaProps) {
               type="number"
               id="cantidad"
               min="1"
-              value={formData.cantidad}
-              onChange={handleChange}
+              value={formulario.cantidad}
+              onChange={manejarCambio}
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               required
             />
@@ -149,8 +142,8 @@ export default function RegistrarPrenda({ onRegister }: RegistrarPrendaProps) {
                 id="precioCompra"
                 min="0"
                 step="0.01"
-                value={formData.precioCompra}
-                onChange={handleChange}
+                value={formulario.precioCompra}
+                onChange={manejarCambio}
                 className="w-full pl-8 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 required
               />
@@ -167,8 +160,8 @@ export default function RegistrarPrenda({ onRegister }: RegistrarPrendaProps) {
                 id="precioVenta"
                 min="0"
                 step="0.01"
-                value={formData.precioVenta}
-                onChange={handleChange}
+                value={formulario.precioVenta}
+                onChange={manejarCambio}
                 className="w-full pl-8 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 required
               />
@@ -185,8 +178,8 @@ export default function RegistrarPrenda({ onRegister }: RegistrarPrendaProps) {
               type="text"
               id="talle"
               placeholder="Ej: 38, 40, 42 o 38-42"
-              value={formData.talle}
-              onChange={handleChange}
+              value={formulario.talle}
+              onChange={manejarCambio}
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
@@ -201,8 +194,8 @@ export default function RegistrarPrenda({ onRegister }: RegistrarPrendaProps) {
                 id="totalCompra"
                 min="0"
                 step="0.01"
-                value={formData.totalCompra}
-                onChange={handleChange}
+                value={formulario.totalCompra}
+                onChange={manejarCambio}
                 className="w-full pl-8 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -219,8 +212,8 @@ export default function RegistrarPrenda({ onRegister }: RegistrarPrendaProps) {
               <input
                 type="text"
                 id="nombreMayorista"
-                value={formData.nombreMayorista}
-                onChange={handleChange}
+                value={formulario.nombreMayorista}
+                onChange={manejarCambio}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 required
               />
@@ -232,8 +225,8 @@ export default function RegistrarPrenda({ onRegister }: RegistrarPrendaProps) {
               <input
                 type="text"
                 id="direccionMayorista"
-                value={formData.direccionMayorista}
-                onChange={handleChange}
+                value={formulario.direccionMayorista}
+                onChange={manejarCambio}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 required
               />
@@ -245,8 +238,8 @@ export default function RegistrarPrenda({ onRegister }: RegistrarPrendaProps) {
               <input
                 type="tel"
                 id="telefonoMayorista"
-                value={formData.telefonoMayorista}
-                onChange={handleChange}
+                value={formulario.telefonoMayorista}
+                onChange={manejarCambio}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -256,7 +249,7 @@ export default function RegistrarPrenda({ onRegister }: RegistrarPrendaProps) {
         <div className="flex justify-end">
           <button
             type="button"
-            onClick={handleCancel}
+            onClick={manejarCancelacion}
             className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 mr-3 hover:bg-gray-50"
           >
             Cancelar

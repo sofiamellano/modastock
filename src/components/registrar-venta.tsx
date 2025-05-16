@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useEffect, type FormEvent } from "react"
-import { database, getGarmentById, registerNewSale, type SaleItem } from "@/src/lib/data"
+import { baseDeDatos, obtenerPrendaPorId, registrarNuevaVenta, type ItemVenta } from "@/src/lib/data"
 
-interface GarmentRow {
+interface FilaPrenda {
   id: string
-  garmentId: string
-  quantity: string
-  price: string
+  prendaId: string
+  cantidad: string
+  precio: string
 }
 
 interface RegistrarVentaProps {
@@ -15,106 +15,91 @@ interface RegistrarVentaProps {
 }
 
 export default function RegistrarVenta({ onRegister }: RegistrarVentaProps) {
-  const [garmentRows, setGarmentRows] = useState<GarmentRow[]>([{ id: "1", garmentId: "", quantity: "", price: "" }])
+  const [filasPrenda, setFilasPrenda] = useState<FilaPrenda[]>([{ id: "1", prendaId: "", cantidad: "", precio: "" }])
   const [totalVenta, setTotalVenta] = useState("0.00")
 
   useEffect(() => {
-    calculateTotalSale()
-  }, [garmentRows])
+    calcularTotalVenta()
+  }, [filasPrenda])
 
-  const addGarmentRow = () => {
-    const newId = (garmentRows.length + 1).toString()
-    setGarmentRows([...garmentRows, { id: newId, garmentId: "", quantity: "", price: "" }])
+  const agregarFilaPrenda = () => {
+    const nuevoId = (filasPrenda.length + 1).toString()
+    setFilasPrenda([...filasPrenda, { id: nuevoId, prendaId: "", cantidad: "", precio: "" }])
   }
 
-  const removeGarmentRow = (id: string) => {
-    if (garmentRows.length > 1) {
-      setGarmentRows(garmentRows.filter((row) => row.id !== id))
+  const eliminarFilaPrenda = (id: string) => {
+    if (filasPrenda.length > 1) {
+      setFilasPrenda(filasPrenda.filter((fila) => fila.id !== id))
     }
   }
 
-  const handleGarmentChange = (id: string, field: keyof GarmentRow, value: string) => {
-    setGarmentRows(
-      garmentRows.map((row) => {
-        if (row.id === id) {
-          const updatedRow = { ...row, [field]: value }
+  const manejarCambio = (id: string, campo: keyof FilaPrenda, valor: string) => {
+    setFilasPrenda(
+      filasPrenda.map((fila) => {
+        if (fila.id === id) {
+          const filaActualizada = { ...fila, [campo]: valor }
 
-          // Auto-fill price when garment is selected
-          if (field === "garmentId" && value) {
-            const garment = getGarmentById(Number.parseInt(value))
-            if (garment) {
-              updatedRow.price = garment.salePrice.toFixed(2)
+          if (campo === "prendaId" && valor) {
+            const prenda = obtenerPrendaPorId(Number.parseInt(valor))
+            if (prenda) {
+              filaActualizada.precio = prenda.precioVenta.toFixed(2)
             }
           }
 
-          return updatedRow
+          return filaActualizada
         }
-        return row
-      }),
+        return fila
+      })
     )
   }
 
-  const calculateTotalSale = () => {
+  const calcularTotalVenta = () => {
     let total = 0
-    garmentRows.forEach((row) => {
-      const quantity = Number.parseFloat(row.quantity) || 0
-      const price = Number.parseFloat(row.price) || 0
-      total += quantity * price
+    filasPrenda.forEach((fila) => {
+      const cantidad = Number.parseFloat(fila.cantidad) || 0
+      const precio = Number.parseFloat(fila.precio) || 0
+      total += cantidad * precio
     })
     setTotalVenta(total.toFixed(2))
   }
 
-  const handleSubmit = (e: FormEvent) => {
+  const manejarEnvio = (e: FormEvent) => {
     e.preventDefault()
 
-    // Validate rows
-    const saleItems: SaleItem[] = []
-    let isValid = true
+    const itemsVenta: ItemVenta[] = []
+    let esValido = true
 
-    garmentRows.forEach((row) => {
-      if (!row.garmentId || !row.quantity || !row.price) {
-        isValid = false
+    filasPrenda.forEach((fila) => {
+      if (!fila.prendaId || !fila.cantidad || !fila.precio) {
+        esValido = false
         return
       }
 
-      const garmentId = Number.parseInt(row.garmentId)
-      const quantity = Number.parseInt(row.quantity)
-      const price = Number.parseFloat(row.price)
+      const prendaId = Number.parseInt(fila.prendaId)
+      const cantidad = Number.parseInt(fila.cantidad)
+      const precio = Number.parseFloat(fila.precio)
 
-      // Check stock
-      const garment = getGarmentById(garmentId)
-      if (!garment || garment.stock < quantity) {
-        alert(
-          `No hay suficiente stock de ${garment?.type} (${garment?.size || "N/A"}). Stock disponible: ${garment?.stock}`,
-        )
-        isValid = false
+      const prenda = obtenerPrendaPorId(prendaId)
+      if (!prenda || prenda.stock < cantidad) {
+        alert(`No hay suficiente stock de ${prenda?.tipo} (${prenda?.talle || "N/A"}). Stock disponible: ${prenda?.stock}`)
+        esValido = false
         return
       }
 
-      saleItems.push({
-        garmentId,
-        quantity,
-        price,
-      })
+      itemsVenta.push({ prendaId, cantidad, precio })
     })
 
-    if (!isValid || saleItems.length === 0) {
+    if (!esValido || itemsVenta.length === 0) {
       alert("Por favor complete todos los campos correctamente.")
       return
     }
 
-    // Register sale
-    const success = registerNewSale(saleItems)
+    const exito = registrarNuevaVenta(itemsVenta)
 
-    if (success) {
-      // Reset form
-      setGarmentRows([{ id: "1", garmentId: "", quantity: "", price: "" }])
+    if (exito) {
+      setFilasPrenda([{ id: "1", prendaId: "", cantidad: "", precio: "" }])
       setTotalVenta("0.00")
-
-      // Show success message
-      alert("Venta registrada exitosamente!")
-
-      // Update parent component
+      alert("¡Venta registrada exitosamente!")
       onRegister()
     }
   }
@@ -124,23 +109,23 @@ export default function RegistrarVenta({ onRegister }: RegistrarVentaProps) {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-gray-800">Registrar Nueva Venta</h2>
       </div>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={manejarEnvio}>
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">Prendas Vendidas</label>
           <div>
-            {garmentRows.map((row) => (
-              <div key={row.id} className="grid grid-cols-1 md:grid-cols-12 gap-2 mb-3">
+            {filasPrenda.map((fila) => (
+              <div key={fila.id} className="grid grid-cols-1 md:grid-cols-12 gap-2 mb-3">
                 <div className="md:col-span-5">
                   <select
-                    value={row.garmentId}
-                    onChange={(e) => handleGarmentChange(row.id, "garmentId", e.target.value)}
+                    value={fila.prendaId}
+                    onChange={(e) => manejarCambio(fila.id, "prendaId", e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
                   >
                     <option value="">Seleccionar Prenda...</option>
-                    {database.garments.map((garment) => (
-                      <option key={garment.id} value={garment.id}>
-                        {garment.type} ({garment.size || "N/A"}) - Stock: {garment.stock}
+                    {baseDeDatos.prendas.map((prenda) => (
+                      <option key={prenda.id} value={prenda.id}>
+                        {prenda.tipo} ({prenda.talle || "N/A"}) - Stock: {prenda.stock}
                       </option>
                     ))}
                   </select>
@@ -149,8 +134,8 @@ export default function RegistrarVenta({ onRegister }: RegistrarVentaProps) {
                   <input
                     type="number"
                     min="1"
-                    value={row.quantity}
-                    onChange={(e) => handleGarmentChange(row.id, "quantity", e.target.value)}
+                    value={fila.cantidad}
+                    onChange={(e) => manejarCambio(fila.id, "cantidad", e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="Cantidad"
                     required
@@ -163,8 +148,8 @@ export default function RegistrarVenta({ onRegister }: RegistrarVentaProps) {
                       type="number"
                       min="0"
                       step="0.01"
-                      value={row.price}
-                      onChange={(e) => handleGarmentChange(row.id, "price", e.target.value)}
+                      value={fila.precio}
+                      onChange={(e) => manejarCambio(fila.id, "precio", e.target.value)}
                       className="w-full pl-8 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       placeholder="Precio"
                       required
@@ -174,9 +159,9 @@ export default function RegistrarVenta({ onRegister }: RegistrarVentaProps) {
                 <div className="md:col-span-1 flex items-center justify-center">
                   <button
                     type="button"
-                    onClick={() => removeGarmentRow(row.id)}
+                    onClick={() => eliminarFilaPrenda(fila.id)}
                     className="text-red-500 hover:text-red-700"
-                    disabled={garmentRows.length === 1}
+                    disabled={filasPrenda.length === 1}
                   >
                     <i className="fas fa-trash"></i>
                   </button>
@@ -186,7 +171,7 @@ export default function RegistrarVenta({ onRegister }: RegistrarVentaProps) {
           </div>
           <button
             type="button"
-            onClick={addGarmentRow}
+            onClick={agregarFilaPrenda}
             className="mt-2 px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
           >
             <i className="fas fa-plus mr-1"></i>Añadir otra prenda
@@ -214,7 +199,7 @@ export default function RegistrarVenta({ onRegister }: RegistrarVentaProps) {
         <div className="flex justify-end">
           <button
             type="button"
-            onClick={() => setGarmentRows([{ id: "1", garmentId: "", quantity: "", price: "" }])}
+            onClick={() => setFilasPrenda([{ id: "1", prendaId: "", cantidad: "", precio: "" }])}
             className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 mr-3 hover:bg-gray-50"
           >
             Cancelar

@@ -130,19 +130,7 @@ export default function Sidebar({ collapsed, onToggle, onNavigate, activeSection
           </div>
         </nav>
       </div>
-      <div className="p-4 border-t border-indigo-700">
-        <div className="flex items-center">
-          <img
-            src="https://randomuser.me/api/portraits/women/44.jpg"
-            alt="User"
-            className="w-8 h-8 rounded-full mr-3"
-          />
-          <div className={`sidebar-text ${collapsed ? "hidden" : ""}`}>
-            <p className="text-sm font-medium">Admin User</p>
-            <p className="text-xs text-indigo-300">Administrador</p>
-          </div>
-        </div>
-      </div>
+      
     </div>
   )
 }

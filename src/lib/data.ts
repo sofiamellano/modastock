@@ -1,244 +1,214 @@
-export interface Supplier {
+// Interfaces
+export interface Proveedor {
   id: number
-  name: string
-  address: string
-  phone: string
+  nombre: string
+  direccion: string
+  telefono: string
 }
 
-export interface Garment {
+export interface Prenda {
   id: number
-  type: string
-  size: string | null
+  tipo: string
+  talle: string | null
   stock: number
-  purchasePrice: number
-  salePrice: number
-  supplierId: number
+  precioCompra: number
+  precioVenta: number
+  proveedorId: number
 }
 
-export interface SaleItem {
-  garmentId: number
-  quantity: number
-  price: number
+export interface ItemVenta {
+  prendaId: number
+  cantidad: number
+  precio: number
 }
 
-export interface Sale {
+export interface Venta {
   id: number
-  date: string
-  items: SaleItem[]
+  fecha: string
+  items: ItemVenta[]
   total: number
 }
 
-export interface Database {
-  suppliers: Supplier[]
-  garments: Garment[]
-  sales: Sale[]
+export interface BaseDeDatos {
+  proveedores: Proveedor[]
+  prendas: Prenda[]
+  ventas: Venta[]
 }
 
-// Database simulation
-export const database: Database = {
-  suppliers: [
-    { id: 1, name: "Moda Mayorista S.A.", address: "Av. Principal 123, Ciudad", phone: "555-1234" },
-    { id: 2, name: "Textiles del Norte", address: "Calle Secundaria 456, Ciudad", phone: "555-5678" },
-  ],
-  garments: [
-    { id: 1, type: "Camisa", size: "M", stock: 15, purchasePrice: 12.5, salePrice: 25.99, supplierId: 1 },
-    { id: 2, type: "Pantalón", size: "32", stock: 8, purchasePrice: 18.75, salePrice: 39.99, supplierId: 1 },
-    { id: 3, type: "Vestido", size: "S", stock: 5, purchasePrice: 22.0, salePrice: 45.5, supplierId: 2 },
-    { id: 4, type: "Chaqueta", size: "L", stock: 3, purchasePrice: 35.0, salePrice: 79.99, supplierId: 2 },
-    { id: 5, type: "Falda", size: "38", stock: 10, purchasePrice: 15.25, salePrice: 32.5, supplierId: 1 },
-  ],
-  sales: [
-    {
-      id: 1,
-      date: new Date().toISOString().split("T")[0],
-      items: [
-        { garmentId: 1, quantity: 2, price: 25.99 },
-        { garmentId: 5, quantity: 1, price: 32.5 },
-      ],
-      total: 84.48,
-    },
-    {
-      id: 2,
-      date: new Date().toISOString().split("T")[0],
-      items: [
-        { garmentId: 2, quantity: 1, price: 39.99 },
-        { garmentId: 3, quantity: 1, price: 45.5 },
-      ],
-      total: 85.49,
-    },
-    {
-      id: 3,
-      date: new Date().toISOString().split("T")[0],
-      items: [{ garmentId: 4, quantity: 1, price: 79.99 }],
-      total: 79.99,
-    },
-  ],
+// Simulación de base de datos (sin datos)
+export const baseDeDatos: BaseDeDatos = {
+  proveedores: [],
+  prendas: [],
+  ventas: [],
 }
 
-// Helper functions
-export function getSupplierById(id: number): Supplier | undefined {
-  return database.suppliers.find((s) => s.id === id)
+// Funciones auxiliares
+export function obtenerProveedorPorId(id: number): Proveedor | undefined {
+  return baseDeDatos.proveedores.find((p) => p.id === id)
 }
 
-export function getGarmentById(id: number): Garment | undefined {
-  return database.garments.find((g) => g.id === id)
+export function obtenerPrendaPorId(id: number): Prenda | undefined {
+  return baseDeDatos.prendas.find((p) => p.id === id)
 }
 
-export function getSalesToday(): Sale[] {
-  const today = new Date().toISOString().split("T")[0]
-  return database.sales.filter((sale) => sale.date === today)
+export function obtenerVentasDeHoy(): Venta[] {
+  const hoy = new Date().toISOString().split("T")[0]
+  return baseDeDatos.ventas.filter((venta) => venta.fecha === hoy)
 }
 
-export function calculateIncomeToday(): number {
-  const salesToday = getSalesToday()
-  return salesToday.reduce((total, sale) => total + sale.total, 0)
+export function calcularIngresosHoy(): number {
+  const ventasHoy = obtenerVentasDeHoy()
+  return ventasHoy.reduce((total, venta) => total + venta.total, 0)
 }
 
-export function getTotalStock(): number {
-  return database.garments.reduce((total, garment) => total + garment.stock, 0)
+export function obtenerStockTotal(): number {
+  return baseDeDatos.prendas.reduce((total, prenda) => total + prenda.stock, 0)
 }
 
-export function getLowStockItems(): Garment[] {
-  return database.garments.filter((garment) => garment.stock < 5)
+export function obtenerPrendasConPocoStock(): Prenda[] {
+  return baseDeDatos.prendas.filter((prenda) => prenda.stock < 5)
 }
 
-export function getGarmentsByType(): Record<string, number> {
-  const types: Record<string, number> = {}
-  database.garments.forEach((garment) => {
-    if (!types[garment.type]) {
-      types[garment.type] = 0
+export function obtenerPrendasPorTipo(): Record<string, number> {
+  const tipos: Record<string, number> = {}
+  baseDeDatos.prendas.forEach((prenda) => {
+    if (!tipos[prenda.tipo]) {
+      tipos[prenda.tipo] = 0
     }
-    types[garment.type] += garment.stock
+    tipos[prenda.tipo] += prenda.stock
   })
-  return types
+  return tipos
 }
 
-export function getSalesByDay(): Record<string, number> {
-  const salesByDay: Record<string, number> = {}
-  const last7Days: string[] = []
-  const today = new Date()
+export function obtenerVentasPorDia(): Record<string, number> {
+  const ventasPorDia: Record<string, number> = {}
+  const ultimos7Dias: string[] = []
+  const hoy = new Date()
 
   for (let i = 6; i >= 0; i--) {
-    const date = new Date(today)
-    date.setDate(date.getDate() - i)
-    const dateStr = date.toISOString().split("T")[0]
-    last7Days.push(dateStr)
-    salesByDay[dateStr] = 0
+    const fecha = new Date(hoy)
+    fecha.setDate(fecha.getDate() - i)
+    const fechaStr = fecha.toISOString().split("T")[0]
+    ultimos7Dias.push(fechaStr)
+    ventasPorDia[fechaStr] = 0
   }
 
-  database.sales.forEach((sale) => {
-    if (last7Days.includes(sale.date)) {
-      salesByDay[sale.date] += sale.total
+  baseDeDatos.ventas.forEach((venta) => {
+    if (ultimos7Dias.includes(venta.fecha)) {
+      ventasPorDia[venta.fecha] += venta.total
     }
   })
 
-  return salesByDay
+  return ventasPorDia
 }
 
-export function formatDate(dateStr: string, short = false): string {
-  const date = new Date(dateStr)
-  if (short) {
-    return date.toLocaleDateString("es-ES", { day: "numeric", month: "short" })
+export function formatearFecha(fechaStr: string, corta = false): string {
+  const fecha = new Date(fechaStr)
+  if (corta) {
+    return fecha.toLocaleDateString("es-ES", { day: "numeric", month: "short" })
   }
-  return date.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })
+  return fecha.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })
 }
 
-export function registerNewGarment(
+export function registrarNuevaPrenda(
   tipoPrenda: string,
   cantidad: number,
   precioCompra: number,
   precioVenta: number,
   talle: string,
-  nombreMayorista: string,
-  direccionMayorista: string,
-  telefonoMayorista: string,
+  nombreProveedor: string,
+  direccionProveedor: string,
+  telefonoProveedor: string,
 ): void {
-  // Find or create supplier
-  let supplier = database.suppliers.find((s) => s.name.toLowerCase() === nombreMayorista.toLowerCase())
-  if (!supplier) {
-    const newSupplierId = database.suppliers.length > 0 ? Math.max(...database.suppliers.map((s) => s.id)) + 1 : 1
-    supplier = {
-      id: newSupplierId,
-      name: nombreMayorista,
-      address: direccionMayorista,
-      phone: telefonoMayorista,
+  let proveedor = baseDeDatos.proveedores.find(
+    (p) => p.nombre.toLowerCase() === nombreProveedor.toLowerCase(),
+  )
+  if (!proveedor) {
+    const nuevoProveedorId = baseDeDatos.proveedores.length > 0
+      ? Math.max(...baseDeDatos.proveedores.map((p) => p.id)) + 1
+      : 1
+    proveedor = {
+      id: nuevoProveedorId,
+      nombre: nombreProveedor,
+      direccion: direccionProveedor,
+      telefono: telefonoProveedor,
     }
-    database.suppliers.push(supplier)
+    baseDeDatos.proveedores.push(proveedor)
   }
 
-  // Create new garment
-  const newGarmentId = database.garments.length > 0 ? Math.max(...database.garments.map((g) => g.id)) + 1 : 1
-  const newGarment = {
-    id: newGarmentId,
-    type: tipoPrenda,
-    size: talle || null,
+  const nuevaPrendaId = baseDeDatos.prendas.length > 0
+    ? Math.max(...baseDeDatos.prendas.map((p) => p.id)) + 1
+    : 1
+
+  const nuevaPrenda = {
+    id: nuevaPrendaId,
+    tipo: tipoPrenda,
+    talle: talle || null,
     stock: cantidad,
-    purchasePrice: precioCompra,
-    salePrice: precioVenta,
-    supplierId: supplier.id,
+    precioCompra,
+    precioVenta,
+    proveedorId: proveedor.id,
   }
-  database.garments.push(newGarment)
+  baseDeDatos.prendas.push(nuevaPrenda)
 }
 
-export function registerNewSale(saleItems: SaleItem[]): boolean {
-  // Validate stock
-  for (const item of saleItems) {
-    const garment = getGarmentById(item.garmentId)
-    if (!garment || garment.stock < item.quantity) {
+export function registrarNuevaVenta(itemsVenta: ItemVenta[]): boolean {
+  for (const item of itemsVenta) {
+    const prenda = obtenerPrendaPorId(item.prendaId)
+    if (!prenda || prenda.stock < item.cantidad) {
       return false
     }
   }
 
-  // Calculate total
-  const total = saleItems.reduce((sum, item) => sum + item.quantity * item.price, 0)
+  const total = itemsVenta.reduce((suma, item) => suma + item.cantidad * item.precio, 0)
 
-  // Create new sale
-  const newSaleId = database.sales.length > 0 ? Math.max(...database.sales.map((s) => s.id)) + 1 : 1
-  const newSale = {
-    id: newSaleId,
-    date: new Date().toISOString().split("T")[0],
-    items: saleItems,
+  const nuevaVentaId = baseDeDatos.ventas.length > 0
+    ? Math.max(...baseDeDatos.ventas.map((v) => v.id)) + 1
+    : 1
+
+  const nuevaVenta = {
+    id: nuevaVentaId,
+    fecha: new Date().toISOString().split("T")[0],
+    items: itemsVenta,
     total,
   }
-  database.sales.push(newSale)
+  baseDeDatos.ventas.push(nuevaVenta)
 
-  // Update garment stocks
-  saleItems.forEach((item) => {
-    const garment = getGarmentById(item.garmentId)
-    if (garment) {
-      garment.stock -= item.quantity
+  itemsVenta.forEach((item) => {
+    const prenda = obtenerPrendaPorId(item.prendaId)
+    if (prenda) {
+      prenda.stock -= item.cantidad
     }
   })
 
   return true
 }
 
-export function updateGarment(
-  garmentId: number,
-  type: string,
-  size: string,
+export function actualizarPrenda(
+  prendaId: number,
+  tipo: string,
+  talle: string,
   stock: number,
-  salePrice: number,
+  precioVenta: number,
 ): boolean {
-  const garment = getGarmentById(garmentId)
-  if (!garment) return false
+  const prenda = obtenerPrendaPorId(prendaId)
+  if (!prenda) return false
 
-  garment.type = type
-  garment.size = size || null
-  garment.stock = stock
-  garment.salePrice = salePrice
+  prenda.tipo = tipo
+  prenda.talle = talle || null
+  prenda.stock = stock
+  prenda.precioVenta = precioVenta
 
   return true
 }
 
-export function deleteGarment(garmentId: number): boolean {
-  const initialLength = database.garments.length
-  database.garments = database.garments.filter((g) => g.id !== garmentId)
+export function eliminarPrenda(prendaId: number): boolean {
+  const cantidadInicial = baseDeDatos.prendas.length
+  baseDeDatos.prendas = baseDeDatos.prendas.filter((p) => p.id !== prendaId)
 
-  // Remove any sales that include this garment
-  database.sales = database.sales.filter((sale) => {
-    return !sale.items.some((item) => item.garmentId === garmentId)
-  })
+  baseDeDatos.ventas = baseDeDatos.ventas.filter((venta) =>
+    !venta.items.some((item) => item.prendaId === prendaId)
+  )
 
-  return database.garments.length < initialLength
+  return baseDeDatos.prendas.length < cantidadInicial
 }
