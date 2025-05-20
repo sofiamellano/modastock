@@ -1,23 +1,50 @@
-import { useState, useMemo } from "react"
-import { baseDeDatos, obtenerPrendaPorId, formatearFecha } from "@/src/lib/data"
+"use client";
+
+import { useEffect, useState, useMemo } from "react";
+import { obtenerVentas, obtenerPrendas } from "@/src/lib/api";
 
 interface HistorialVentasProps {
-  alVerDetalleVenta: (idVenta: number) => void
+  alVerDetalleVenta: (idVenta: number) => void;
 }
 
+const formatearFecha = (fecha: string) => {
+  return new Date(fecha).toLocaleDateString("es-AR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+};
+
 const HistorialVentas = ({ alVerDetalleVenta }: HistorialVentasProps) => {
-  const [fechaInicio, setFechaInicio] = useState("")
-  const [fechaFin, setFechaFin] = useState("")
+  const [fechaInicio, setFechaInicio] = useState("");
+  const [fechaFin, setFechaFin] = useState("");
+  const [ventas, setVentas] = useState<any[]>([]);
+  const [prendas, setPrendas] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const [ventasRes, prendasRes] = await Promise.all([
+        obtenerVentas(),
+        obtenerPrendas(),
+      ]);
+      setVentas(ventasRes);
+      setPrendas(prendasRes);
+    };
+    fetchData();
+  }, []);
+
+  const obtenerPrendaPorId = (id: number) => prendas.find((p) => p.idprenda === id);
 
   const ventasFiltradas = useMemo(() => {
-    return baseDeDatos.ventas
+    return ventas
       .filter((venta) => {
-        if (fechaInicio && venta.fecha < fechaInicio) return false
-        if (fechaFin && venta.fecha > fechaFin) return false
-        return true
+        const fecha = venta.fecha?.slice(0, 10);
+        if (fechaInicio && fecha < fechaInicio) return false;
+        if (fechaFin && fecha > fechaFin) return false;
+        return true;
       })
-      .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-  }, [fechaInicio, fechaFin])
+      .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+  }, [ventas, fechaInicio, fechaFin]);
 
   return (
     <div className="p-4 bg-white shadow-md rounded-lg">
@@ -25,9 +52,7 @@ const HistorialVentas = ({ alVerDetalleVenta }: HistorialVentasProps) => {
 
       <div className="flex flex-wrap gap-4 mb-6">
         <div className="flex flex-col">
-          <label htmlFor="fechaInicio" className="text-sm font-medium mb-1">
-            Desde
-          </label>
+          <label htmlFor="fechaInicio" className="text-sm font-medium mb-1">Desde</label>
           <input
             type="date"
             id="fechaInicio"
@@ -38,9 +63,7 @@ const HistorialVentas = ({ alVerDetalleVenta }: HistorialVentasProps) => {
         </div>
 
         <div className="flex flex-col">
-          <label htmlFor="fechaFin" className="text-sm font-medium mb-1">
-            Hasta
-          </label>
+          <label htmlFor="fechaFin" className="text-sm font-medium mb-1">Hasta</label>
           <input
             type="date"
             id="fechaFin"
@@ -57,7 +80,8 @@ const HistorialVentas = ({ alVerDetalleVenta }: HistorialVentasProps) => {
             <tr className="bg-gray-100 text-left text-sm font-medium text-gray-700">
               <th className="px-6 py-3 border-b">ID</th>
               <th className="px-6 py-3 border-b">Fecha</th>
-              <th className="px-6 py-3 border-b">Prendas</th>
+              <th className="px-6 py-3 border-b">Prenda</th>
+              <th className="px-6 py-3 border-b">Cantidad</th>
               <th className="px-6 py-3 border-b">Total ($)</th>
               <th className="px-6 py-3 border-b">Acción</th>
             </tr>
@@ -65,42 +89,37 @@ const HistorialVentas = ({ alVerDetalleVenta }: HistorialVentasProps) => {
           <tbody>
             {ventasFiltradas.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
                   No se encontraron ventas en el rango seleccionado.
                 </td>
               </tr>
             ) : (
               ventasFiltradas.map((venta) => {
-                const nombresPrendas = venta.items
-                  .map((item) => {
-                    const prenda = obtenerPrendaPorId(item.prendaId)
-                    return prenda ? `${prenda.tipo} (x${item.cantidad})` : `Prenda ID ${item.prendaId}`
-                  })
-                  .join(", ")
-
+                const prenda = obtenerPrendaPorId(venta.prendaid);
                 return (
-                  <tr key={venta.id} className="hover:bg-gray-50 text-sm">
-                    <td className="px-6 py-4 border-b">{venta.id}</td>
+                  <tr key={venta.idventa} className="hover:bg-gray-50 text-sm">
+                    <td className="px-6 py-4 border-b">{venta.idventa}</td>
                     <td className="px-6 py-4 border-b">{formatearFecha(venta.fecha)}</td>
-                    <td className="px-6 py-4 border-b">{nombresPrendas}</td>
-                    <td className="px-6 py-4 border-b">${venta.total.toFixed(2)}</td>
+                    <td className="px-6 py-4 border-b">{prenda ? prenda.prenda : `ID ${venta.prendaid}`}</td>
+                    <td className="px-6 py-4 border-b">{venta.cantidad_vendida}</td>
+                    <td className="px-6 py-4 border-b">${venta.total_venta.toFixed(2)}</td>
                     <td className="px-6 py-4 border-b">
                       <button
-                        onClick={() => alVerDetalleVenta(venta.id)}
+                        onClick={() => alVerDetalleVenta(venta.idventa)}
                         className="text-indigo-600 hover:underline"
                       >
                         Ver
                       </button>
                     </td>
                   </tr>
-                )
+                );
               })
             )}
           </tbody>
         </table>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default HistorialVentas
+export default HistorialVentas;

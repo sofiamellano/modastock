@@ -1,8 +1,24 @@
-"use client"
+"use client";
 
-import { baseDeDatos } from "@/src/lib/data"
+import { useEffect, useState } from "react";
+import { obtenerPrendas, obtenerMayoristas } from "@/src/lib/api";
 
 export default function Mayoristas() {
+  const [mayoristas, setMayoristas] = useState<any[]>([]);
+  const [prendas, setPrendas] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const [mayoristasRes, prendasRes] = await Promise.all([
+        obtenerMayoristas(),
+        obtenerPrendas(),
+      ]);
+      setMayoristas(mayoristasRes);
+      setPrendas(prendasRes);
+    };
+    fetchData();
+  }, []);
+
   return (
     <div className="lg:col-span-3 bg-white rounded-xl shadow p-6 fade-in">
       <div className="flex justify-between items-center mb-6">
@@ -31,12 +47,12 @@ export default function Mayoristas() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {baseDeDatos.proveedores.map((proveedor) => {
-              const cantidadPrendas = baseDeDatos.prendas.filter((p) => p.proveedorId === proveedor.id).length
+            {mayoristas.map((proveedor) => {
+              const cantidadPrendas = prendas.filter((p) => p.mayoristaid === proveedor.idmayorista).length;
 
               return (
-                <tr key={proveedor.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">{proveedor.nombre}</td>
+                <tr key={proveedor.idmayorista}>
+                  <td className="px-6 py-4 whitespace-nowrap">{proveedor.mayorista}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{proveedor.direccion}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{proveedor.telefono || "N/A"}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{cantidadPrendas}</td>
@@ -49,11 +65,11 @@ export default function Mayoristas() {
                     </button>
                   </td>
                 </tr>
-              )
+              );
             })}
           </tbody>
         </table>
       </div>
     </div>
-  )
+  );
 }

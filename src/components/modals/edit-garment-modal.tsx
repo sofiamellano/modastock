@@ -1,61 +1,76 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState, useEffect, type FormEvent } from "react"
-import { obtenerPrendaPorId, actualizarPrenda } from "@/src/lib/data"
+import { useState, useEffect } from "react";
+import { obtenerPrendas, actualizarPrenda, PrendaPayload } from "@/src/lib/api";
 
 interface ModalEditarPrendaProps {
-  prendaId: number
-  alCerrar: () => void
-  alActualizar: () => void
+  prendaId: number;
+  alCerrar: () => void;
+  alActualizar: () => void;
 }
 
-export default function ModalEditarPrenda({ prendaId, alCerrar, alActualizar }: ModalEditarPrendaProps) {
+export default function ModalEditarPrenda({
+  prendaId,
+  alCerrar,
+  alActualizar,
+}: ModalEditarPrendaProps) {
   const [datosFormulario, setDatosFormulario] = useState({
     tipo: "",
     talle: "",
     stock: "",
     precioVenta: "",
-  })
+  });
+  const [prendaOriginal, setPrendaOriginal] = useState<any | null>(null);
 
   useEffect(() => {
-    const prenda = obtenerPrendaPorId(prendaId)
-    if (prenda) {
-      setDatosFormulario({
-        tipo: prenda.tipo,
-        talle: prenda.talle || "",
-        stock: prenda.stock.toString(),
-        precioVenta: prenda.precioVenta.toFixed(2),
-      })
-    }
-  }, [prendaId])
+    const cargarPrenda = async () => {
+      const prendas = await obtenerPrendas();
+      const prenda = prendas.find((p: any) => p.idprenda === prendaId);
+      if (prenda) {
+        setPrendaOriginal(prenda);
+        setDatosFormulario({
+          tipo: prenda.prenda,
+          talle: prenda.talle || "",
+          stock: prenda.stockactual.toString(),
+          precioVenta: prenda.precioventa.toFixed(2),
+        });
+      }
+    };
+    cargarPrenda();
+  }, [prendaId]);
 
-  const manejarCambio = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { id, value } = e.target
+  const manejarCambio = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
     setDatosFormulario((prev) => ({
       ...prev,
       [id.replace("editar", "").toLowerCase()]: value,
-    }))
-  }
+    }));
+  };
 
-  const manejarEnvio = (e: FormEvent) => {
-    e.preventDefault()
+  const manejarGuardar = async () => {
+    if (!prendaOriginal) return;
 
-    const exito = actualizarPrenda(
-      prendaId,
-      datosFormulario.tipo,
-      datosFormulario.talle,
-      Number.parseInt(datosFormulario.stock),
-      Number.parseFloat(datosFormulario.precioVenta),
-    )
+    const data: PrendaPayload = {
+      prenda: datosFormulario.tipo,
+      cantidad: prendaOriginal.cantidad,
+      mayoristaid: prendaOriginal.mayoristaid,
+      preciocompra: parseFloat(prendaOriginal.preciocompra),
+      precioventa: parseFloat(datosFormulario.precioVenta),
+      stockactual: parseInt(datosFormulario.stock),
+      talle: datosFormulario.talle,
+      totalcompra: parseFloat(prendaOriginal.totalcompra),
+    };
 
-    if (exito) {
-      alert("¡Prenda actualizada exitosamente!")
-      alActualizar()
-      alCerrar()
+    try {
+      await actualizarPrenda(prendaId, data);
+      alert("¡Prenda actualizada exitosamente!");
+      alActualizar();
+      alCerrar();
+    } catch (err) {
+      console.error(err);
+      alert("Error al actualizar la prenda.");
     }
-  }
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -66,28 +81,21 @@ export default function ModalEditarPrenda({ prendaId, alCerrar, alActualizar }: 
             <i className="fas fa-times"></i>
           </button>
         </div>
-        <form onSubmit={manejarEnvio}>
+
+        {/* Ya no es <form>, es un div */}
+        <div>
           <div className="mb-4">
             <label htmlFor="editarTipo" className="block text-sm font-medium text-gray-700 mb-1">
               Tipo de Prenda*
             </label>
-            <select
+            <input
+              type="text"
               id="editarTipo"
               value={datosFormulario.tipo}
               onChange={manejarCambio}
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               required
-            >
-              <option value="">Seleccionar...</option>
-              <option value="Camisa">Camisa</option>
-              <option value="Pantalón">Pantalón</option>
-              <option value="Vestido">Vestido</option>
-              <option value="Chaqueta">Chaqueta</option>
-              <option value="Falda">Falda</option>
-              <option value="Blusa">Blusa</option>
-              <option value="Short">Short</option>
-              <option value="Abrigo">Abrigo</option>
-            </select>
+            />
           </div>
           <div className="mb-4">
             <label htmlFor="editarTalle" className="block text-sm font-medium text-gray-700 mb-1">
@@ -142,14 +150,15 @@ export default function ModalEditarPrenda({ prendaId, alCerrar, alActualizar }: 
               Cancelar
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={manejarGuardar}
               className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <i className="fas fa-save mr-2"></i>Guardar Cambios
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,114 +1,125 @@
-"use client"
+"use client";
 
-import { useState, useEffect, type FormEvent } from "react"
-import { baseDeDatos, obtenerPrendaPorId, registrarNuevaVenta, type ItemVenta } from "@/src/lib/data"
+import { useState, useEffect, type FormEvent } from "react";
+import { obtenerPrendas, crearVenta } from "@/src/lib/api";
 
 interface FilaPrenda {
-  id: string
-  prendaId: string
-  cantidad: string
-  precio: string
+  id: string;
+  prendaId: string;
+  cantidad: string;
+  precio: string;
 }
 
 interface RegistrarVentaProps {
-  onRegister: () => void
+  onRegister: () => void;
 }
 
 export default function RegistrarVenta({ onRegister }: RegistrarVentaProps) {
-  const [filasPrenda, setFilasPrenda] = useState<FilaPrenda[]>([{ id: "1", prendaId: "", cantidad: "", precio: "" }])
-  const [totalVenta, setTotalVenta] = useState("0.00")
+  const [filasPrenda, setFilasPrenda] = useState<FilaPrenda[]>([
+    { id: "1", prendaId: "", cantidad: "", precio: "" },
+  ]);
+  const [totalVenta, setTotalVenta] = useState("0.00");
+  const [prendas, setPrendas] = useState<any[]>([]);
 
   useEffect(() => {
-    calcularTotalVenta()
-  }, [filasPrenda])
+    const fetchPrendas = async () => {
+      const res = await obtenerPrendas();
+      setPrendas(res);
+    };
+    fetchPrendas();
+  }, []);
+
+  useEffect(() => {
+    calcularTotalVenta();
+  }, [filasPrenda]);
 
   const agregarFilaPrenda = () => {
-    const nuevoId = (filasPrenda.length + 1).toString()
-    setFilasPrenda([...filasPrenda, { id: nuevoId, prendaId: "", cantidad: "", precio: "" }])
-  }
+    const nuevoId = (filasPrenda.length + 1).toString();
+    setFilasPrenda([...filasPrenda, { id: nuevoId, prendaId: "", cantidad: "", precio: "" }]);
+  };
 
   const eliminarFilaPrenda = (id: string) => {
     if (filasPrenda.length > 1) {
-      setFilasPrenda(filasPrenda.filter((fila) => fila.id !== id))
+      setFilasPrenda(filasPrenda.filter((fila) => fila.id !== id));
     }
-  }
+  };
 
   const manejarCambio = (id: string, campo: keyof FilaPrenda, valor: string) => {
-    setFilasPrenda(
-      filasPrenda.map((fila) => {
+    setFilasPrenda((prev) =>
+      prev.map((fila) => {
         if (fila.id === id) {
-          const filaActualizada = { ...fila, [campo]: valor }
+          const actualizada = { ...fila, [campo]: valor };
 
-          if (campo === "prendaId" && valor) {
-            const prenda = obtenerPrendaPorId(Number.parseInt(valor))
+          if (campo === "prendaId") {
+            const prenda = prendas.find((p) => p.idprenda === parseInt(valor));
             if (prenda) {
-              filaActualizada.precio = prenda.precioVenta.toFixed(2)
+              actualizada.precio = prenda.precioventa.toFixed(2);
             }
           }
 
-          return filaActualizada
+          return actualizada;
         }
-        return fila
+        return fila;
       })
-    )
-  }
+    );
+  };
 
   const calcularTotalVenta = () => {
-    let total = 0
+    let total = 0;
     filasPrenda.forEach((fila) => {
-      const cantidad = Number.parseFloat(fila.cantidad) || 0
-      const precio = Number.parseFloat(fila.precio) || 0
-      total += cantidad * precio
-    })
-    setTotalVenta(total.toFixed(2))
-  }
+      const cantidad = parseFloat(fila.cantidad) || 0;
+      const precio = parseFloat(fila.precio) || 0;
+      total += cantidad * precio;
+    });
+    setTotalVenta(total.toFixed(2));
+  };
 
-  const manejarEnvio = (e: FormEvent) => {
-    e.preventDefault()
+  const manejarEnvio = async (e: FormEvent) => {
+    e.preventDefault();
 
-    const itemsVenta: ItemVenta[] = []
-    let esValido = true
+    let esValido = true;
 
-    filasPrenda.forEach((fila) => {
+    for (const fila of filasPrenda) {
       if (!fila.prendaId || !fila.cantidad || !fila.precio) {
-        esValido = false
-        return
+        esValido = false;
+        break;
       }
 
-      const prendaId = Number.parseInt(fila.prendaId)
-      const cantidad = Number.parseInt(fila.cantidad)
-      const precio = Number.parseFloat(fila.precio)
+      const prenda = prendas.find((p) => p.idprenda === parseInt(fila.prendaId));
+      if (!prenda || prenda.stockactual < parseInt(fila.cantidad)) {
+        alert(`No hay suficiente stock de ${prenda?.prenda} (${prenda?.talle || "N/A"}). Stock: ${prenda?.stockactual}`);
+        esValido = false;
+        break;
+      }
+    }
 
-      const prenda = obtenerPrendaPorId(prendaId)
-      if (!prenda || prenda.stock < cantidad) {
-        alert(`No hay suficiente stock de ${prenda?.tipo} (${prenda?.talle || "N/A"}). Stock disponible: ${prenda?.stock}`)
-        esValido = false
-        return
+    if (!esValido) {
+      alert("Por favor complete todos los campos correctamente.");
+      return;
+    }
+
+    try {
+      for (const fila of filasPrenda) {
+        await crearVenta({
+          prendaid: parseInt(fila.prendaId),
+          cantidad_vendida: parseInt(fila.cantidad),
+          total_venta: parseFloat(fila.precio) * parseInt(fila.cantidad),
+          fecha: new Date().toISOString(),
+        });
       }
 
-      itemsVenta.push({ prendaId, cantidad, precio })
-    })
-
-    if (!esValido || itemsVenta.length === 0) {
-      alert("Por favor complete todos los campos correctamente.")
-      return
+      setFilasPrenda([{ id: "1", prendaId: "", cantidad: "", precio: "" }]);
+      setTotalVenta("0.00");
+      alert("¡Venta registrada exitosamente!");
+      onRegister();
+    } catch (err) {
+      console.error(err);
+      alert("Error al registrar la venta.");
     }
-
-    const exito = registrarNuevaVenta(itemsVenta)
-
-    if (exito) {
-      setFilasPrenda([{ id: "1", prendaId: "", cantidad: "", precio: "" }])
-      setTotalVenta("0.00")
-      alert("¡Venta registrada exitosamente!")
-      onRegister()
-    }
-  }
+  };
 
   return (
     <div className="lg:col-span-2 bg-white rounded-xl shadow p-6 fade-in">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-gray-800">Registrar Nueva Venta</h2>
-      </div>
       <form onSubmit={manejarEnvio}>
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">Prendas Vendidas</label>
@@ -122,10 +133,10 @@ export default function RegistrarVenta({ onRegister }: RegistrarVentaProps) {
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
                   >
-                    <option value="">Seleccionar Prenda...</option>
-                    {baseDeDatos.prendas.map((prenda) => (
-                      <option key={prenda.id} value={prenda.id}>
-                        {prenda.tipo} ({prenda.talle || "N/A"}) - Stock: {prenda.stock}
+                    <option value="">Seleccionar Prenda.</option>
+                    {prendas.map((prenda) => (
+                      <option key={prenda.idprenda} value={prenda.idprenda}>
+                        {prenda.prenda} ({prenda.talle || "N/A"}) - Stock: {prenda.stockactual}
                       </option>
                     ))}
                   </select>
@@ -213,5 +224,5 @@ export default function RegistrarVenta({ onRegister }: RegistrarVentaProps) {
         </div>
       </form>
     </div>
-  )
+  );
 }

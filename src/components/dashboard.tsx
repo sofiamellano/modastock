@@ -1,123 +1,151 @@
-"use client"
+"use client";
 
-import { useEffect, useRef } from "react"
-import { Chart, registerables } from "chart.js"
+import { useEffect, useRef, useState } from "react";
+import { Chart, registerables } from "chart.js";
 import {
-  obtenerPrendasConPocoStock,
-  obtenerPrendasPorTipo,
-  obtenerVentasPorDia,
-  obtenerProveedorPorId,
-  formatearFecha
-} from "@/src/lib/data"
+  obtenerPrendas,
+  obtenerVentas,
+  obtenerMayoristas,
+} from "@/src/lib/api";
 
-Chart.register(...registerables)
+Chart.register(...registerables);
 
 interface DashboardProps {
   stats: {
-    prendasTotales: number
-    ventasHoy: number
-    mayoristasTotales: number
-    ingresosHoy: number
-  }
+    prendasTotales: number;
+    ventasHoy: number;
+    mayoristasTotales: number;
+    ingresosHoy: number;
+  };
 }
 
 export default function Dashboard({ stats }: DashboardProps) {
-  const stockChartRef = useRef<HTMLCanvasElement>(null)
-  const salesChartRef = useRef<HTMLCanvasElement>(null)
-  const stockChartInstance = useRef<Chart | null>(null)
-  const salesChartInstance = useRef<Chart | null>(null)
+  const stockChartRef = useRef<HTMLCanvasElement>(null);
+  const salesChartRef = useRef<HTMLCanvasElement>(null);
+  const stockChartInstance = useRef<Chart | null>(null);
+  const salesChartInstance = useRef<Chart | null>(null);
+
+  const [prendas, setPrendas] = useState<any[]>([]);
+  const [ventas, setVentas] = useState<any[]>([]);
+  const [mayoristas, setMayoristas] = useState<any[]>([]);
 
   useEffect(() => {
-    inicializarGraficos()
+    const cargarDatos = async () => {
+      const [prendasRes, ventasRes, mayoristasRes] = await Promise.all([
+        obtenerPrendas(),
+        obtenerVentas(),
+        obtenerMayoristas(),
+      ]);
+      setPrendas(prendasRes);
+      setVentas(ventasRes);
+      setMayoristas(mayoristasRes);
+    };
+
+    cargarDatos();
+  }, []);
+
+  useEffect(() => {
+    if (prendas.length > 0) inicializarGraficoStock();
+    if (ventas.length > 0) inicializarGraficoVentas();
+
     return () => {
-      stockChartInstance.current?.destroy()
-      salesChartInstance.current?.destroy()
-    }
-  }, [])
+      stockChartInstance.current?.destroy();
+      salesChartInstance.current?.destroy();
+    };
+  }, [prendas, ventas]);
 
-  const inicializarGraficos = () => {
-    if (stockChartRef.current && salesChartRef.current) {
-      const stockCtx = stockChartRef.current.getContext("2d")
-      if (stockCtx) {
-        stockChartInstance.current?.destroy()
+  const inicializarGraficoStock = () => {
+    if (!stockChartRef.current) return;
 
-        const prendasPorTipo = obtenerPrendasPorTipo()
-        stockChartInstance.current = new Chart(stockCtx, {
-          type: "bar",
-          data: {
-            labels: Object.keys(prendasPorTipo),
-            datasets: [
-              {
-                label: "Prendas en Stock",
-                data: Object.values(prendasPorTipo),
-                backgroundColor: "rgba(79, 70, 229, 0.7)",
-                borderColor: "rgba(79, 70, 229, 1)",
-                borderWidth: 1,
-              },
-            ],
+    const ctx = stockChartRef.current.getContext("2d");
+    if (!ctx) return;
+
+    const agrupadas = prendas.reduce((acc: any, p: any) => {
+      acc[p.prenda] = (acc[p.prenda] || 0) + Number(p.stockactual);
+      return acc;
+    }, {});
+
+    stockChartInstance.current?.destroy();
+    stockChartInstance.current = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: Object.keys(agrupadas),
+        datasets: [
+          {
+            label: "Prendas en Stock",
+            data: Object.values(agrupadas),
+            backgroundColor: "rgba(79, 70, 229, 0.7)",
+            borderColor: "rgba(79, 70, 229, 1)",
+            borderWidth: 1,
           },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              y: {
-                beginAtZero: true,
-              },
-            },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
           },
-        })
-      }
+        },
+      },
+    });
+  };
 
-      const salesCtx = salesChartRef.current.getContext("2d")
-      if (salesCtx) {
-        salesChartInstance.current?.destroy()
+  const inicializarGraficoVentas = () => {
+    if (!salesChartRef.current) return;
 
-        const ventasPorDia = obtenerVentasPorDia()
-        salesChartInstance.current = new Chart(salesCtx, {
-          type: "line",
-          data: {
-            labels: Object.keys(ventasPorDia).map((fecha) => formatearFecha(fecha, true)),
-            datasets: [
-              {
-                label: "Ventas por Día ($)",
-                data: Object.values(ventasPorDia),
-                backgroundColor: "rgba(16, 185, 129, 0.2)",
-                borderColor: "rgba(16, 185, 129, 1)",
-                borderWidth: 2,
-                tension: 0.4,
-                fill: true,
-              },
-            ],
+    const ctx = salesChartRef.current.getContext("2d");
+    if (!ctx) return;
+
+    const agrupadas = ventas.reduce((acc: any, v: any) => {
+      const fecha = v.fecha.split("T")[0];
+      acc[fecha] = (acc[fecha] || 0) + Number(v.total_venta);
+      return acc;
+    }, {});
+
+    const labels = Object.keys(agrupadas).sort();
+    const datos = labels.map((fecha) => agrupadas[fecha]);
+
+    salesChartInstance.current?.destroy();
+    salesChartInstance.current = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: labels.map(formatearFecha),
+        datasets: [
+          {
+            label: "Ventas por Día ($)",
+            data: datos,
+            backgroundColor: "rgba(16, 185, 129, 0.2)",
+            borderColor: "rgba(16, 185, 129, 1)",
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true,
           },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              y: {
-                beginAtZero: true,
-              },
-            },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
           },
-        })
-      }
-    }
-  }
+        },
+      },
+    });
+  };
 
-  const prendasBajoStock = obtenerPrendasConPocoStock()
+  const prendasBajoStock = prendas.filter((p) => p.stockactual < 5);
 
   return (
     <>
-      {/* Tarjetas de estadísticas */}
+      {/* Tarjetas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <CardEstadistica icono="fas fa-tshirt" color="indigo" titulo="Prendas en Stock" valor={stats.prendasTotales} />
         <CardEstadistica icono="fas fa-cash-register" color="green" titulo="Ventas Hoy" valor={stats.ventasHoy} />
         <CardEstadistica icono="fas fa-truck" color="blue" titulo="Mayoristas" valor={stats.mayoristasTotales} />
-        <CardEstadistica
-          icono="fas fa-dollar-sign"
-          color="purple"
-          titulo="Ingresos Hoy"
-          valor={`$${stats.ingresosHoy.toFixed(2)}`}
-        />
+        <CardEstadistica icono="fas fa-dollar-sign" color="purple" titulo="Ingresos Hoy" valor={`$${stats.ingresosHoy.toFixed(2)}`} />
       </div>
 
       {/* Gráficos */}
@@ -136,7 +164,7 @@ export default function Dashboard({ stats }: DashboardProps) {
         </div>
       </div>
 
-      {/* Prendas con stock bajo */}
+      {/* Bajo stock */}
       <div className="bg-white rounded-xl shadow p-6">
         <h2 className="text-xl font-bold text-gray-800 mb-4">Prendas con Stock Bajo</h2>
         <div className="overflow-x-auto">
@@ -158,17 +186,17 @@ export default function Dashboard({ stats }: DashboardProps) {
                   </td>
                 </tr>
               ) : (
-                prendasBajoStock.map((prenda) => {
-                  const mayorista = obtenerProveedorPorId(prenda.proveedorId)
+                prendasBajoStock.map((p) => {
+                  const mayorista = mayoristas.find((m) => m.idmayorista === p.mayoristaid);
                   return (
-                    <tr key={prenda.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">{prenda.tipo}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{prenda.talle || "N/A"}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-red-600 font-semibold">{prenda.stock}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">${prenda.precioVenta.toFixed(2)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{mayorista?.nombre}</td>
+                    <tr key={p.idprenda}>
+                      <td className="px-6 py-4 whitespace-nowrap">{p.prenda}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{p.talle || "N/A"}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-red-600 font-semibold">{p.stockactual}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">${Number(p.precioventa).toFixed(2)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{mayorista?.mayorista || "N/A"}</td>
                     </tr>
-                  )
+                  );
                 })
               )}
             </tbody>
@@ -176,21 +204,20 @@ export default function Dashboard({ stats }: DashboardProps) {
         </div>
       </div>
     </>
-  )
+  );
 }
 
-// Componente reutilizable para tarjetas de estadísticas
-function CardEstadistica({
-  icono,
-  color,
-  titulo,
-  valor,
-}: {
-  icono: string
-  color: string
-  titulo: string
-  valor: string | number
-}) {
+// Utilidades
+const formatearFecha = (fecha: string) => {
+  const date = new Date(fecha);
+  return date.toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
+
+function CardEstadistica({ icono, color, titulo, valor }: { icono: string; color: string; titulo: string; valor: string | number }) {
   return (
     <div className="highlight-card bg-white rounded-xl shadow p-6 flex items-center transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg">
       <div className={`p-3 rounded-full bg-${color}-100 text-${color}-600 mr-4`}>
@@ -201,17 +228,11 @@ function CardEstadistica({
         <p className="text-2xl font-bold">{valor}</p>
       </div>
     </div>
-  )
+  );
 }
 
-// Componente reutilizable para encabezado de tabla
 function EncabezadoTabla({ texto }: { texto: string }) {
   return (
-    <th
-      scope="col"
-      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-    >
-      {texto}
-    </th>
-  )
+    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{texto}</th>
+  );
 }

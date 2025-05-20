@@ -1,38 +1,44 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { baseDeDatos, obtenerProveedorPorId, eliminarPrenda } from "@/src/lib/data"
+import { useState, useEffect } from "react";
+import { obtenerPrendas, obtenerMayoristas } from "@/src/lib/api";
 
 interface InventarioProps {
-  onEditPrenda: (prendaId: number) => void
-  onDataUpdate: () => void
+  onEditPrenda: (prendaId: number) => void;
+  onDataUpdate: () => void;
 }
 
 export default function Inventario({ onEditPrenda, onDataUpdate }: InventarioProps) {
-  const [filtroTipo, setFiltroTipo] = useState("")
-  const [textoBusqueda, setTextoBusqueda] = useState("")
+  const [filtroTipo, setFiltroTipo] = useState("");
+  const [textoBusqueda, setTextoBusqueda] = useState("");
+  const [prendas, setPrendas] = useState<any[]>([]);
+  const [mayoristas, setMayoristas] = useState<any[]>([]);
 
-  const handleEliminarPrenda = (prendaId: number) => {
-    if (window.confirm("¿Está seguro que desea eliminar esta prenda?")) {
-      const success = eliminarPrenda(prendaId)
-      if (success) {
-        alert("¡Prenda eliminada exitosamente!")
-        onDataUpdate()
-      }
-    }
-  }
+  useEffect(() => {
+    const fetchData = async () => {
+      const [prendasRes, mayoristasRes] = await Promise.all([
+        obtenerPrendas(),
+        obtenerMayoristas(),
+      ]);
+      setPrendas(prendasRes);
+      setMayoristas(mayoristasRes);
+    };
+    fetchData();
+  }, [onDataUpdate]);
 
-  const prendasFiltradas = baseDeDatos.prendas.filter((prenda) => {
-    if (filtroTipo && prenda.tipo !== filtroTipo) return false
+  const obtenerProveedorPorId = (id: number) => mayoristas.find((m) => m.idmayorista === id);
+
+  const prendasFiltradas = prendas.filter((prenda) => {
+    if (filtroTipo && prenda.prenda !== filtroTipo) return false;
     if (
       textoBusqueda &&
-      !prenda.tipo.toLowerCase().includes(textoBusqueda.toLowerCase()) &&
+      !prenda.prenda.toLowerCase().includes(textoBusqueda.toLowerCase()) &&
       !(prenda.talle && prenda.talle.toLowerCase().includes(textoBusqueda.toLowerCase()))
     ) {
-      return false
+      return false;
     }
-    return true
-  })
+    return true;
+  });
 
   return (
     <div className="lg:col-span-3 bg-white rounded-xl shadow p-6 fade-in">
@@ -85,38 +91,33 @@ export default function Inventario({ onEditPrenda, onDataUpdate }: InventarioPro
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {prendasFiltradas.map((prenda) => {
-              const proveedor = obtenerProveedorPorId(prenda.proveedorId)
+              const proveedor = obtenerProveedorPorId(prenda.mayoristaid);
 
               return (
-                <tr key={prenda.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">{prenda.tipo}</td>
+                <tr key={prenda.idprenda}>
+                  <td className="px-6 py-4 whitespace-nowrap">{prenda.prenda}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{prenda.talle || "N/A"}</td>
-                  <td className={`px-6 py-4 whitespace-nowrap ${prenda.stock < 5 ? "text-red-600 font-semibold" : ""}`}>
-                    {prenda.stock}
+                  <td className={`px-6 py-4 whitespace-nowrap ${prenda.stockactual < 5 ? "text-red-600 font-semibold" : ""}`}>
+                    {prenda.stockactual}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">${prenda.precioCompra.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">${prenda.precioVenta.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{proveedor?.nombre || "N/A"}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">${Number(prenda.preciocompra).toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">${Number(prenda.precioventa).toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{proveedor?.mayorista || "N/A"}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button
-                      onClick={() => onEditPrenda(prenda.id)}
+                      onClick={() => onEditPrenda(prenda.idprenda)}
                       className="text-indigo-600 hover:text-indigo-900 mr-3"
                     >
                       <i className="fas fa-edit"></i>
                     </button>
-                    <button
-                      onClick={() => handleEliminarPrenda(prenda.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <i className="fas fa-trash"></i>
-                    </button>
+                    {/* Lógica de eliminación puede ir aquí si se implementa en la API */}
                   </td>
                 </tr>
-              )
+              );
             })}
           </tbody>
         </table>
       </div>
     </div>
-  )
+  );
 }
